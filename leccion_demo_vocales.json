@@ -1,0 +1,13 @@
+{
+  "titulo": "Primeras vocales",
+  "instruccion": "Escriba el carácter indicado",
+  "idioma": "es",
+  "nivel": "inicial",
+  "secuencia": [
+    "a",
+    "e",
+    "i",
+    "o",
+    "u"
+  ]
+}
