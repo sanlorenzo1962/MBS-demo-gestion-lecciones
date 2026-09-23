@@ -4,7 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MBS — Gestión de lecciones</title>
-
+<style>
+:root{--bg:#071019;--card:#0c1620;--line:#203448;--text:#dbe8f5;--muted:#7f9ab4;--blue:#2d8cf0;--green:#00d68f;--red:#ff5b67;--amber:#ffc857}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#071019,#0a111a);color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+.wrap{max-width:1080px;margin:auto;padding:24px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.brand h1{margin:0;font-size:1.35rem}.brand p{margin:6px 0 0;color:var(--muted);font-size:.92rem}.badge{border:1px solid var(--green);color:var(--green);padding:7px 10px;border-radius:8px;font-size:.78rem;font-weight:700}.tabs{display:flex;gap:8px;margin:14px 0 20px;flex-wrap:wrap}.tab{padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#0a131c;color:var(--muted);text-decoration:none;font-weight:700;cursor:pointer}.tab.active{border-color:var(--blue);color:#8fc4ff;background:#0c1c2b}.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}@media(max-width:820px){.grid{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}
+.card{background:rgba(12,22,32,.96);border:1px solid var(--line);border-radius:12px;padding:18px}.label{font-size:.72rem;letter-spacing:.12em;color:#6f8aa5;font-weight:700;margin-bottom:12px}.drop{border:1px dashed #365674;border-radius:10px;padding:20px;text-align:center;background:#08131e}.drop strong{display:block;margin-bottom:7px}.drop small{color:var(--muted)}input[type=file]{width:100%;margin-top:14px;color:var(--text)}
+.field{margin-bottom:14px}.field label{display:block;font-size:.8rem;color:#9eb6cc;margin-bottom:6px;font-weight:700}.field input,.field textarea,.field select{width:100%;background:#08131e;color:var(--text);border:1px solid #29435c;border-radius:8px;padding:10px 12px;font:inherit;outline:none}.field textarea{min-height:96px;resize:vertical}.field small{display:block;color:var(--muted);margin-top:5px;line-height:1.35}.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--blue)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:620px){.two{grid-template-columns:1fr}}
+button{border:1px solid var(--blue);background:#0b1b2c;color:#91c8ff;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer}button.primary{background:rgba(0,214,143,.1);border-color:var(--green);color:var(--green)}button.secondary{border-color:#415d77;color:#a9c1d8}button:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.status{margin-top:14px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);color:var(--muted);min-height:42px}.status.ok{border-color:var(--green);color:var(--green)}.status.err{border-color:var(--red);color:#ff8d95}.status.demo{border-color:var(--amber);color:var(--amber)}
+.meta{display:grid;grid-template-columns:120px 1fr;gap:8px;font-size:.9rem}.meta div:nth-child(odd){color:var(--muted)}pre{white-space:pre-wrap;word-break:break-word;background:#06101a;border:1px solid #172b3d;border-radius:8px;padding:12px;max-height:265px;overflow:auto;color:#b9d4ed}.files{display:flex;flex-direction:column;gap:8px}.file{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #1b3042;border-radius:8px;background:#08131c}.file span:last-child{color:var(--muted);font-size:.82rem}.empty{color:var(--muted);font-style:italic}.foot{margin-top:18px;color:#6f8aa5;font-size:.8rem;line-height:1.45}.hidden{display:none!important}.hintbox{border:1px solid #284158;border-radius:8px;padding:10px 12px;background:#08131c;color:#8fa8bf;font-size:.86rem;line-height:1.45;margin-bottom:14px}
 </style>
 </head>
 <body>
@@ -14,7 +22,7 @@
       <h1>MBS — Gestión de lecciones</h1>
       <p>Crear una lección guiada o cargar un archivo JSON existente</p>
     </div>
-    <div class="badge" id="modeBadge">DETECTANDO MODO…</div>
+    <div class="badge" id="modeBadge">GESTIÓN DE LECCIONES — microSD</div>
   </div>
 
   <div class="tabs">
@@ -127,15 +135,12 @@
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const host = location.hostname.toLowerCase();
-  const esGitHubPages = host.endsWith('github.io');
-  const demoLocal = location.protocol === 'file:' || esGitHubPages;
-  const demoFiles = [];
   let selected = null, parsed = null;
 
-  $('modeBadge').textContent = demoLocal ? 'MODO DEMO — SIN ESCRITURA SD' : 'MODO ESP32 — SD REAL';
-  $('modeBadge').style.borderColor = demoLocal ? 'var(--amber)' : 'var(--green)';
-  $('modeBadge').style.color = demoLocal ? 'var(--amber)' : 'var(--green)';
+  // Herramienta real para el ESP32-S3.
+  // La lectura/escritura se realiza exclusivamente mediante las API locales del MBS.
+  $('modeBadge').style.borderColor = 'var(--green)';
+  $('modeBadge').style.color = 'var(--green)';
 
   function setStatus(el, text, kind='') {
     el.className = 'status' + (kind ? ' ' + kind : '');
@@ -230,16 +235,6 @@
 
   async function sendLesson(name,obj,statusEl){
     const text = JSON.stringify(obj,null,2);
-    if (demoLocal) {
-      await new Promise(r=>setTimeout(r,350));
-      const bytes = new Blob([text]).size;
-      const i=demoFiles.findIndex(x=>x.nombre===name);
-      const item={nombre:name,bytes};
-      if(i>=0) demoFiles[i]=item; else demoFiles.push(item);
-      setStatus(statusEl,'DEMO: lección válida. Conectado al ESP32 se guardaría en /lecciones/'+name,'demo');
-      renderFiles(demoFiles);
-      return;
-    }
     const r=await fetch('/api/lecciones/upload?name='+encodeURIComponent(name),{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -261,7 +256,7 @@
       setStatus($('formStatus'),'Guardando lección…');
       await sendLesson(name,obj,$('formStatus'));
     } catch(e) {
-      setStatus($('formStatus'),'No se pudo guardar: '+e.message,'err');
+      setStatus($('formStatus'),'No se pudo guardar. Verificá la conexión con el MBS. '+e.message,'err');
     } finally {
       btn.disabled = false;
     }
@@ -301,7 +296,7 @@
       setStatus(status,'Enviando al ESP32…');
       await sendLesson(selected.name,parsed,status);
     } catch(e) {
-      setStatus(status,'No se pudo cargar: '+e.message,'err');
+      setStatus(status,'No se pudo cargar. Verificá la conexión con el MBS. '+e.message,'err');
     } finally {
       uploadBtn.disabled=false;
     }
@@ -320,22 +315,13 @@
   }
 
   async function loadFiles(){
-    if(demoLocal){
-      const box=$('files');
-      if (demoFiles.length){
-        renderFiles(demoFiles);
-      } else {
-        box.innerHTML='<div class="empty">La lista real de lecciones estará disponible cuando esta página se ejecute desde el ESP32-S3.<br><br>En esta demo podés crear y previsualizar lecciones sin modificar ninguna microSD.</div>';
-      }
-      return;
-    }
     try{
       const r=await fetch('/api/lecciones',{cache:'no-store'});
       const data=await r.json();
       if(!r.ok || !data.ok) throw new Error(data.error||('HTTP '+r.status));
       renderFiles(data.archivos||[]);
     }catch(e){
-      $('files').innerHTML='<div class="empty">No disponible: '+e.message+'</div>';
+      $('files').innerHTML='<div class="empty">MBS no disponible. Conectate a la red Wi-Fi del equipo y abrí esta herramienta desde el ESP32-S3.</div>';
     }
   }
 
